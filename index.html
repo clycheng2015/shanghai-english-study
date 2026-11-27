@@ -391,6 +391,11 @@ button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .scene-line .speak{flex:none}
 .mix-quiz{margin-top:16px}
 .mix-quiz .mq-tagline{font-weight:900;font-size:16.5px;margin:0 0 6px}
+/* ===== 点击锚定：目标内容不被吸顶栏遮住 + 到达高亮 ===== */
+.g-panel,.w-panel,.dir-grade,.book-card{scroll-margin-top:100px}
+@keyframes anchorFlash{0%{outline-color:rgba(14,124,107,.85)}100%{outline-color:rgba(14,124,107,0)}}
+.flash-anchor{outline:4px solid rgba(14,124,107,0);outline-offset:5px;border-radius:18px;animation:anchorFlash 1.5s ease-out}
+@media(prefers-reduced-motion:reduce){.flash-anchor{animation:none;outline-color:var(--teal)}}
 </style></head><body><div class="wrap">
 <div id="view-home">
 <nav class="pagenav no-print" aria-label="分页导航">
@@ -1383,7 +1388,7 @@ if(words.length){h+='<div class="wrong-words">'+words.map(function(e){return '<s
 if(grams.length){h+='<div style="margin-top:10px;font-size:14.5px;line-height:1.8"><b>易错语法：</b>'+grams.map(function(e){return '<div>• '+esc(e.word)+' <button class="fix" style="border:0;background:var(--teal);color:#fff;border-radius:999px;min-height:30px;padding:3px 12px;font-weight:900;cursor:pointer;font-size:13px" data-fix="'+esc(e.book)+'|'+e.ui+'|'+esc(e.word)+'">记住了 ✓</button></div>'}).join("")+'<button class="btn secondary" data-goto-grammar="1" style="margin-top:8px">📚 回语法总汇再看一遍</button></div>'}
 return h+'</div>'}).join("");
 box.querySelectorAll("[data-fix]").forEach(function(b){b.addEventListener("click",function(){var p=b.dataset.fix.split("|");var w=p.slice(2).join("|");if(fixWrong(p[0],+p[1],w)){toast("🎉 「"+w+"」已从错词本划掉！");addStar(1)}})});
-box.querySelectorAll("[data-retest-unit]").forEach(function(b){b.addEventListener("click",function(){var p=b.dataset.retestUnit.split("|");showPage("page-game");startRetest(p[0],+p[1])})});
+box.querySelectorAll("[data-retest-unit]").forEach(function(b){b.addEventListener("click",function(){var p=b.dataset.retestUnit.split("|");showPage("page-game");startRetest(p[0],+p[1]);anchorTo(document.getElementById("gameStage"),false)})});
 box.querySelectorAll("[data-goto-grammar]").forEach(function(b){b.addEventListener("click",function(){goHomeIfUnit();showPage("page-grammar")})});
 }
 function goHomeIfUnit(){if(document.getElementById("view-unit").style.display!=="none"){goHome()}}
@@ -1412,13 +1417,13 @@ return '<button class="unit-card" data-open-unit="'+k+'|'+ui+'"><span class="uni
 return inner+'</div>'}).join("");
 return '<div class="dir-grade '+g[2]+'" id="'+g[1]+'"><div class="grade-head"><span class="grade-badge">'+g[0]+'</span><span class="grade-note">'+g[5]+'</span></div><div class="dir-books">'+books+'</div></div>'}).join("");
 document.getElementById("dirTree").innerHTML=html;
-document.querySelectorAll("[data-open-book]").forEach(function(btn){btn.addEventListener("click",function(){openBookKey=openBookKey===btn.dataset.openBook?null:btn.dataset.openBook;renderDirectory()})});
+document.querySelectorAll("[data-open-book]").forEach(function(btn){btn.addEventListener("click",function(){var k=btn.dataset.openBook;openBookKey=openBookKey===k?null:k;renderDirectory();var nb=document.querySelector('[data-open-book="'+k+'"]');if(nb)anchorTo(nb.closest(".book-card")||nb,false)})});
 document.querySelectorAll("[data-open-unit]").forEach(function(btn){btn.addEventListener("click",function(){var p=btn.dataset.openUnit.split("|");openUnit(p[0],+p[1])})});
 }
-function goHome(){document.getElementById("view-unit").style.display="none";document.getElementById("view-home").style.display="";showPage("page-books");var t=document.getElementById("directory");if(t)setTimeout(function(){t.scrollIntoView()},40)}
+function goHome(){document.getElementById("view-unit").style.display="none";document.getElementById("view-home").style.display="";showPage("page-books");var t=document.getElementById("directory");if(t)setTimeout(function(){anchorTo(t,false)},40)}
 document.getElementById("backBtn").addEventListener("click",goHome);
 document.getElementById("backBtn2").addEventListener("click",goHome);
-document.querySelectorAll("[data-jump]").forEach(function(b){b.addEventListener("click",function(){if(b.dataset.open&&openBookKey!==b.dataset.open){openBookKey=b.dataset.open;renderDirectory()}var el=document.getElementById(b.dataset.jump);if(el)el.scrollIntoView({behavior:"smooth"})})});
+document.querySelectorAll("[data-jump]").forEach(function(b){b.addEventListener("click",function(){if(b.dataset.open&&openBookKey!==b.dataset.open){openBookKey=b.dataset.open;renderDirectory()}var el=document.getElementById(b.dataset.jump);if(!el)return;var pg=el.closest?el.closest(".page"):null;if(pg&&!pg.classList.contains("active"))showPage(pg.id);anchorTo(el)})});
 function speak(t){try{var u=new SpeechSynthesisUtterance(t);u.lang='en-GB';u.rate=.85;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
 document.addEventListener('click',function(e){var t=e.target.closest?e.target.closest('[data-say]'):null;if(t)speak(t.getAttribute('data-say'))});
 
@@ -1443,7 +1448,7 @@ document.getElementById("unitStats").innerHTML='<span class="head-stat"><b>'+wc+
 document.getElementById("unitMeta").textContent=b.meta+" ｜ "+b.sub;
 var jumps=[["sec-words","必背词"],["sec-seen","见过词"],["sec-phrases","词组搭配"],["sec-sent","句型对话"],["sec-grammar","语法"],["sec-phonics","语音"],["sec-mistakes","易错点"],["sec-exercise","练习自测"]];
 document.getElementById("unitJump").innerHTML=jumps.map(function(j){return '<button class="jump-btn" data-jumpsec="'+j[0]+'">'+j[1]+'</button>'}).join("");
-document.querySelectorAll("[data-jumpsec]").forEach(function(btn){btn.addEventListener("click",function(){showUnitPanel(btn.dataset.jumpsec)})});initUnitPanels();
+document.querySelectorAll("[data-jumpsec]").forEach(function(btn){btn.addEventListener("click",function(){showUnitPanel(btn.dataset.jumpsec)})});
 var h="";
 /* 1 words */
 h+='<section class="sec" id="sec-words">'+secHead("1","必背词",wc+" 个")+'<p class="sec-hint">点每个词旁边的 🔊 跟读，要会听、会说、会认。课本 Topic words / Check it 是必背组，后一组是课文里的重点词。</p>'+wg.map(function(g){return '<div class="word-group"><p class="word-group-h">'+esc(g.label||"核心词")+'（'+g.words.length+'）</p><div class="word-grid">'+g.words.map(function(w){var disp=cleanToken(w)||w;var say=sayText(w);return '<div class="word-chip"><span class="en">'+esc(disp)+'</span>'+(say?'<button class="speak" data-say="'+esc(say)+'" aria-label="朗读 '+esc(say)+'">🔊</button>':"")+'</div>'}).join("")+'</div></div>'}).join("")+'</section>';
@@ -1463,7 +1468,8 @@ h+='<section class="sec" id="sec-mistakes">'+secHead("7","易错点",splitSent(u
 var uwr2=unitWrong(k,ui);
 h+='<section class="sec" id="sec-exercise">'+secHead("8","练习与自测","")+'<p class="sec-hint">先做课本练习，再做下面的选词自测，最后过一遍自查三项。自测可以反复做：答对得 ⭐，答错的词会进错词本，之后只考错词，答对就划掉。</p><ol class="step-list">'+splitSent(u[8]).map(function(s,i){return '<li><span class="step-num">'+(i+1)+'</span><span>'+esc(s)+'。</span></li>'}).join("")+'</ol><div class="selfcheck"><div class="sc"><b>自查 1 · 说词</b>不看书，说出本单元 5 个必背词。</div><div class="sc"><b>自查 2 · 认词</b>翻到见过词，随机指 5 个，能认出来就行。</div><div class="sc"><b>自查 3 · 造句对话</b>用本单元语法造 2 句，再把句型问答演一遍。</div></div>'+(uwr2.length?'<div style="margin-top:14px"><button class="btn rust" id="uqRetestBtn">🎯 本单元有 '+uwr2.length+' 个错词，去游戏区只考错词</button></div>':"")+'<div id="uqBox" style="margin-top:18px"></div><div class="src-note">来源：课本原文转录。课本正文不印音标，本站不补音标；中文为老师讲解。听力答案课本未印处，本站不编答案。</div></section>';
 document.getElementById("unitSections").innerHTML=h;
-var rtb=document.getElementById("uqRetestBtn");if(rtb)rtb.addEventListener("click",function(){document.getElementById("view-unit").style.display="none";document.getElementById("view-home").style.display="";showPage("page-game");startRetest(k,ui)});
+initUnitPanels();
+var rtb=document.getElementById("uqRetestBtn");if(rtb)rtb.addEventListener("click",function(){document.getElementById("view-unit").style.display="none";document.getElementById("view-home").style.display="";showPage("page-game");startRetest(k,ui);anchorTo(document.getElementById("gameStage"),false)});
 buildQuiz(document.querySelector("#uqBox"),u,k,ui);
 var pv=document.getElementById("prevUnit"),nx=document.getElementById("nextUnit");
 pv.disabled=ui<=0;nx.disabled=ui>=b.units.length-1;
@@ -1571,12 +1577,29 @@ document.getElementById("modeRetest").addEventListener("click",function(){startR
 /* ===== 分页：像一本书，一次只翻一页 ===== */
 var TABPAGE={"directory":"page-books","tool-search":"page-words","tool-practice":"page-words","game-zone":"page-game","wrong-book":"page-wrong","grammar-summary":"page-grammar","grade3":"page-books","grade4":"page-books","grade5":"page-books"};
 var PAGETAB={"page-books":"directory","page-words":"tool-search","page-game":"game-zone","page-wrong":"wrong-book","page-grammar":"grammar-summary"};
+/* 点击锚定：等新内容显示出来后，按吸顶栏的实际高度算准位置，滚到目标内容顶部，并给目标一个到达高亮 */
+function anchorTo(el,flash){
+if(!el)return;
+var run=function(){
+var y=el.getBoundingClientRect().top+window.pageYOffset;var off=10;
+var uv=document.getElementById("view-unit");
+if(uv&&uv.style.display!=="none"){
+var tb=uv.querySelector(".unit-topbar");if(tb)off+=tb.offsetHeight;
+var jn=document.getElementById("unitJump");if(jn)off+=jn.offsetHeight+18;
+}else{
+var pn=document.querySelector(".pagenav");if(pn)off+=pn.offsetHeight;
+}
+window.scrollTo({top:Math.max(0,y-off),behavior:"smooth"});
+if(flash!==false){el.classList.remove("flash-anchor");void el.offsetWidth;el.classList.add("flash-anchor");setTimeout(function(){el.classList.remove("flash-anchor")},1600)}
+};
+if(window.requestAnimationFrame)requestAnimationFrame(function(){requestAnimationFrame(run)});else setTimeout(run,30);
+}
 function showPage(pid){var vh=document.getElementById("view-home");if(vh&&vh.style.display==="none")vh.style.display="";document.querySelectorAll("#view-home .page").forEach(function(pg){pg.classList.toggle("active",pg.id===pid)});document.querySelectorAll(".pg-btn").forEach(function(b){b.classList.toggle("on",b.dataset.page===pid)});document.querySelectorAll("[data-tab]").forEach(function(b){b.classList.toggle("on",b.dataset.tab===PAGETAB[pid])});window.scrollTo(0,0)}
 document.querySelectorAll("[data-page]").forEach(function(b){b.addEventListener("click",function(){showPage(b.dataset.page)})});
 /* 语法总汇分块：一次只看一块 */
 var GPANELS=["g-letters","g-pos","g-contract","g-spell","g-irreg","g-quick","g-tenses","g-tense-past","g-tense-future","g-tense-prog","g-tense-pastprog","g-tense-perfect","g-compare","g-other","g-other-b","g-other-b2","g-other-c","g-other-d","g-other-d2","g-other-e","g-structure","g-parts","g-overview","g-quiz","mix-1","mix-2","mix-3","mix-4","mix-5","mix-6","mix-7","mix-8","mix-9","mix-10","mix-11","mix-12","mix-13","mix-14","mix-15","mix-16","mix-17","mix-18","mix-19","mix-20","mix-21","mix-22","mix-23","mix-24","mix-25","mix-26","mix-27","mix-28","mix-29","mix-30"];var curGPanel="g-letters";
 var GTITLES={"g-letters":"26 个字母大小写","g-pos":"10 种词性","g-contract":"缩略词","g-spell":"动词的三种变形","g-irreg":"不规则过去式必背表","g-quick":"时态速查表","g-tenses":"时态 1/6 · 一般现在时","g-tense-past":"时态 2/6 · 一般过去时","g-tense-future":"时态 3/6 · 一般将来时","g-tense-prog":"时态 4/6 · 现在进行时","g-tense-pastprog":"时态 5/6 · 过去进行时","g-tense-perfect":"时态 6/6 · 现在完成时","g-compare":"两个易混对比","g-other":"其他语法点 1/7","g-other-b":"其他语法点 2/7","g-other-b2":"其他语法点 3/7 · 10 种代词","g-other-c":"其他语法点 4/7","g-other-d":"其他语法点 5/7","g-other-d2":"其他语法点 6/7","g-other-e":"其他语法点 7/7","g-structure":"句子结构","g-parts":"句子成分入门","g-overview":"16 时态总览","g-quiz":"时态小测","mix-1":"易错易混 1/30 · 地点介词","mix-2":"易错易混 2/30 · 两种“前面”","mix-3":"易错易混 3/30 · 在车上 on / in","mix-4":"易错易混 4/30 · good 和 well","mix-5":"易错易混 5/30 · many 和 much","mix-6":"易错易混 6/30 · some 和 any","mix-7":"易错易混 7/30 · see / look / watch","mix-8":"易错易混 8/30 · listen 和 hear","mix-9":"易错易混 9/30 · 四个“说”","mix-10":"易错易混 10/30 · its 和 it's","mix-11":"易错易混 11/30 · their / there / they're","mix-12":"易错易混 12/30 · to / too / two","mix-13":"易错易混 13/30 · 旁边中间附近","mix-14":"易错易混 14/30 · 树上墙上陷阱","mix-15":"易错易混 15/30 · 大小地方 in/on/at","mix-16":"易错易混 16/30 · 时间 in/on/at","mix-17":"易错易混 17/30 · by 的用法","mix-18":"易错易混 18/30 · 上车下车骑车","mix-19":"易错易混 19/30 · good/well 续集","mix-20":"易错易混 20/30 · a few / few","mix-21":"易错易混 21/30 · too many / too much","mix-22":"易错易混 22/30 · read 与 look for","mix-23":"易错易混 23/30 · a / an / the","mix-24":"易错易混 24/30 · this / that / these / those","mix-25":"易错易混 25/30 · your 和 you're","mix-26":"易错易混 26/30 · borrow 和 lend","mix-27":"易错易混 27/30 · bring / take / come / go","mix-28":"易错易混 28/30 · play 加不加 the","mix-29":"易错易混 29/30 · wear / put on","mix-30":"易错易混 30/30 · 家和学校固定搭配"};
-function showGrammarPanel(id){if(GPANELS.indexOf(id)<0)return;curGPanel=id;document.querySelectorAll(".g-panel").forEach(function(s){s.classList.toggle("on",s.id===id)});document.querySelectorAll("[data-gsub]").forEach(function(b){var also=(b.dataset.galso||"").split(" ");b.classList.toggle("on",b.dataset.gsub===id||also.indexOf(id)>=0)});var i=GPANELS.indexOf(id);var gpEl=document.getElementById("gPos");if(gpEl)gpEl.textContent="第 "+(i+1)+" / "+GPANELS.length+" 小页 · "+(GTITLES[id]||"");var pv=document.getElementById("gPrev"),nx=document.getElementById("gNext");if(pv)pv.disabled=i<=0;if(nx)nx.disabled=i>=GPANELS.length-1;var gs=document.getElementById("grammar-summary");if(gs)gs.scrollIntoView({behavior:"smooth",block:"start"})}
+function showGrammarPanel(id){if(GPANELS.indexOf(id)<0)return;curGPanel=id;document.querySelectorAll(".g-panel").forEach(function(s){s.classList.toggle("on",s.id===id)});document.querySelectorAll("[data-gsub]").forEach(function(b){var also=(b.dataset.galso||"").split(" ");b.classList.toggle("on",b.dataset.gsub===id||also.indexOf(id)>=0)});var i=GPANELS.indexOf(id);var gpEl=document.getElementById("gPos");if(gpEl)gpEl.textContent="第 "+(i+1)+" / "+GPANELS.length+" 小页 · "+(GTITLES[id]||"");var pv=document.getElementById("gPrev"),nx=document.getElementById("gNext");if(pv)pv.disabled=i<=0;if(nx)nx.disabled=i>=GPANELS.length-1;anchorTo(document.getElementById(id))}
 var gPv=document.getElementById("gPrev"),gNx=document.getElementById("gNext");
 if(gPv)gPv.addEventListener("click",function(){var i=GPANELS.indexOf(curGPanel);if(i>0)showGrammarPanel(GPANELS[i-1])});
 if(gNx)gNx.addEventListener("click",function(){var i=GPANELS.indexOf(curGPanel);if(i<GPANELS.length-1)showGrammarPanel(GPANELS[i+1])});
@@ -1584,7 +1607,7 @@ document.querySelectorAll("[data-gsub]").forEach(function(b){b.classList.toggle(
 /* 单元页分节：一次只看一节 */
 var UPANELS=["sec-words","sec-seen","sec-phrases","sec-sent","sec-grammar","sec-phonics","sec-mistakes","sec-exercise"];var curUPanel="sec-words";
 function initUnitPanels(){document.querySelectorAll("#unitSections > section").forEach(function(s){s.classList.add("u-panel")});showUnitPanel("sec-words",true)}
-function showUnitPanel(id,keep){if(UPANELS.indexOf(id)<0)return;curUPanel=id;document.querySelectorAll("#unitSections > section").forEach(function(s){s.classList.toggle("on",s.id===id)});document.querySelectorAll("[data-jumpsec]").forEach(function(b){b.classList.toggle("on",b.dataset.jumpsec===id)});var i=UPANELS.indexOf(id);var pv=document.getElementById("uPrev"),nx=document.getElementById("uNext");if(pv)pv.disabled=i<=0;if(nx)nx.disabled=i>=UPANELS.length-1;if(!keep){var j=document.getElementById("unitJump");if(j)j.scrollIntoView({behavior:"smooth",block:"start"})}}
+function showUnitPanel(id,keep){if(UPANELS.indexOf(id)<0)return;curUPanel=id;document.querySelectorAll("#unitSections > section").forEach(function(s){s.classList.toggle("on",s.id===id)});document.querySelectorAll("[data-jumpsec]").forEach(function(b){b.classList.toggle("on",b.dataset.jumpsec===id)});var i=UPANELS.indexOf(id);var pv=document.getElementById("uPrev"),nx=document.getElementById("uNext");if(pv)pv.disabled=i<=0;if(nx)nx.disabled=i>=UPANELS.length-1;if(!keep){anchorTo(document.getElementById(id))}}
 var uPv=document.getElementById("uPrev"),uNx=document.getElementById("uNext");
 if(uPv)uPv.addEventListener("click",function(){var i=UPANELS.indexOf(curUPanel);if(i>0)showUnitPanel(UPANELS[i-1])});
 if(uNx)uNx.addEventListener("click",function(){var i=UPANELS.indexOf(curUPanel);if(i<UPANELS.length-1)showUnitPanel(UPANELS[i+1])});
@@ -1604,7 +1627,7 @@ function confetti(){try{if(window.matchMedia&&window.matchMedia("(prefers-reduce
 /* 手机底部导航 */
 document.querySelectorAll("[data-tab]").forEach(function(b){b.addEventListener("click",function(){goHomeIfUnit();showPage(TABPAGE[b.dataset.tab]||"page-cover")})});
 /* 查词页：搜词 / 闪卡自测一次只看一个 */
-function showWordPanel(id){document.querySelectorAll("#page-words .w-panel").forEach(function(p){p.classList.toggle("on",p.id===id)});document.querySelectorAll("[data-wsub]").forEach(function(b){b.classList.toggle("on",b.dataset.wsub===id)})}
+function showWordPanel(id){document.querySelectorAll("#page-words .w-panel").forEach(function(p){p.classList.toggle("on",p.id===id)});document.querySelectorAll("[data-wsub]").forEach(function(b){b.classList.toggle("on",b.dataset.wsub===id)});anchorTo(document.getElementById(id))}
 document.querySelectorAll("[data-wsub]").forEach(function(b){b.addEventListener("click",function(){showWordPanel(b.dataset.wsub)})});
 /* ===== 易错易混小课堂：每页 3 道小题，一次只做一题 ===== */
 var MIXQ={
